@@ -117,7 +117,7 @@ export default function Home() {
         existingBooks={books}
         onUpdateRatings={updateRatings}
       />
-      {/* <BookComparison books={books} /> */}
+      <BookComparison books={books} />
     </main>
   );
 }

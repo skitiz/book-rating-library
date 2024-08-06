@@ -39,9 +39,7 @@ const BookList: React.FC<BookListProps> = ({ books, onDelete }) => {
               <Badge>{book.genre}</Badge>
             </div>
             <div className="flex flex-wrap gap-2 mb-2">
-              <Badge variant={book.rating >= 4 ? "default" : "secondary"}>
-                Rating: {book.rating}/5
-              </Badge>
+              <Badge>Rating: {book.rating}/5</Badge>
             </div>
           </CardContent>
         </Card>
