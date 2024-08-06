@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import DatePicker from "./DatePicker";
 
 export interface Book {
   id?: string;
@@ -32,6 +33,7 @@ export interface Book {
   rating: number;
   genre: string;
   coverUrl: string;
+  dateFinished: string;
 }
 
 interface AddBookDialogProps {
@@ -53,6 +55,7 @@ const AddBookDialog: React.FC<AddBookDialogProps> = ({
     rating: 0,
     genre: "",
     coverUrl: "",
+    dateFinished: "",
   });
   const genres = ["Fiction", "Non-fiction", "Mystery", "Sci-Fi", "Romance"];
 
@@ -71,6 +74,7 @@ const AddBookDialog: React.FC<AddBookDialogProps> = ({
       rating: 0,
       genre: "",
       coverUrl: "",
+      dateFinished: "",
     });
     setSelectedGenre("");
     onCompare(newBookWithId);
@@ -82,7 +86,8 @@ const AddBookDialog: React.FC<AddBookDialogProps> = ({
       newBook.author.trim() !== "" &&
       newBook.rating > 0 &&
       newBook.genre.trim() !== "" &&
-      newBook.coverUrl.trim() !== ""
+      newBook.coverUrl.trim() !== "" &&
+      newBook.dateFinished.trim() !== ""
     );
   };
 
@@ -210,6 +215,12 @@ const AddBookDialog: React.FC<AddBookDialogProps> = ({
                 className="col-span-3"
                 required
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="dateFinished" className="text-right">
+                Date Finished
+              </Label>
+              <DatePicker setNewBook={setNewBook} />
             </div>
           </div>
           <DialogFooter>

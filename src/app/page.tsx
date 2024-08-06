@@ -16,6 +16,7 @@ const initialBooks: Book[] = [
     rating: 4,
     coverUrl: "/covers/great-gatsby.jpg",
     genre: "Fiction",
+    dateFinished: "2023-02-01T00:00:00.000Z",
   },
   {
     id: "2",
@@ -24,6 +25,7 @@ const initialBooks: Book[] = [
     rating: 5,
     coverUrl: "/covers/1984.jpg",
     genre: "Fiction",
+    dateFinished: "2023-03-02T00:00:00.000Z",
   },
   // Add more books as needed
 ];
@@ -59,6 +61,7 @@ export default function Home() {
     rating: 0,
     genre: "",
     coverUrl: "",
+    dateFinished: "",
   });
 
   const addBook = (book: Book): void => {

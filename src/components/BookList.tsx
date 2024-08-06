@@ -11,12 +11,21 @@ interface BookListProps {
 }
 
 const BookList: React.FC<BookListProps> = ({ books, onDelete }) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {books.map((book) => (
         <Card key={book.id} className="flex flex-col h-full relative">
           <button
-            onClick={() => onDelete(book.id)}
+            onClick={() => book.id && onDelete(book.id)}
             className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
             aria-label="Delete book"
           >
@@ -40,6 +49,9 @@ const BookList: React.FC<BookListProps> = ({ books, onDelete }) => {
             </div>
             <div className="flex flex-wrap gap-2 mb-2">
               <Badge>Rating: {book.rating}/5</Badge>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              <Badge>Finished: {formatDate(book.dateFinished)}</Badge>
             </div>
           </CardContent>
         </Card>
