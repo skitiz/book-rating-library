@@ -28,7 +28,7 @@ const DatePicker = ({ setNewBook: setNewBook }: { setNewBook: any }) => {
         <Calendar
           mode="single"
           selected={date}
-          onSelect={(date) => {
+          onSelect={(date: any) => {
             setDate(date);
             setNewBook((prevBook: Book) => ({
               ...prevBook,
