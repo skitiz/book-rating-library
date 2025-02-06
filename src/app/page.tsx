@@ -1,126 +1,91 @@
 "use client";
 
-import { useState } from "react";
-import BookList from "@/components/BookList";
-import AddBookDialog from "@/components/AddBookDialog";
-import BookComparison from "@/components/BookComparison";
-import BookComparisonDialog from "@/components/BookComparisonDialog";
-import { Button } from "@/components/ui/button";
-import { Book } from "@/components/AddBookDialog";
+import { useState, useEffect } from "react";
 
-const initialBooks: Book[] = [
-  {
-    id: "1",
-    title: "The Great Gatsby",
-    author: "F. Scott Fitzgerald",
-    rating: 4,
-    coverUrl: "/covers/great-gatsby.jpg",
-    genre: "Fiction",
-    dateFinished: "2023-02-01T00:00:00.000Z",
-  },
-  {
-    id: "2",
-    title: "1984",
-    author: "George Orwell",
-    rating: 5,
-    coverUrl: "/covers/1984.jpg",
-    genre: "Fiction",
-    dateFinished: "2023-03-02T00:00:00.000Z",
-  },
-  // Add more books as needed
-];
-
-const K_FACTOR: number = 32;
-
-const roundToQuarter = (num: number): number => {
-  return Math.round(num * 4) / 4;
-};
-
-const calculateNewRatings = (
-  winner: Book,
-  loser: Book
-): { winner: number; loser: number } => {
-  const expectedScore: number =
-    1 / (1 + Math.pow(10, (loser.rating - winner.rating) / 400));
-  const change: number = (K_FACTOR * (1 - expectedScore)) / 10;
-
-  return {
-    winner: roundToQuarter(Math.min(5, Math.max(1, winner.rating + change))),
-    loser: roundToQuarter(Math.min(5, Math.max(1, loser.rating - change))),
-  };
-};
+interface BookData {
+  title: string;
+  author: string;
+  coverUrl?: string;
+}
 
 export default function Home() {
-  const [books, setBooks] = useState<Book[]>(initialBooks);
-  const [isAddBookOpen, setIsAddBookOpen] = useState<boolean>(false);
-  const [isComparisonOpen, setIsComparisonOpen] = useState<boolean>(false);
-  const [newBook, setNewBook] = useState<Book>({
-    id: "",
-    title: "",
-    author: "",
-    rating: 0,
-    genre: "",
-    coverUrl: "",
-    dateFinished: "",
-  });
+  const [bookData, setBookData] = useState<BookData | null>(null);
 
-  const addBook = (book: Book): void => {
-    setBooks([...books, book]);
-    setNewBook(book);
-  };
+  const ISBN = "9780063373860";
 
-  const compareBooks = (book: Book): void => {
-    setIsComparisonOpen(true);
-  };
+  useEffect(() => {
+    const fetchBookData = async () => {
+      try {
+        const response = await fetch(`https://openlibrary.org/isbn/${ISBN}.json`);
+        const data = await response.json();
+        
+        // Get the first author key if available
+        const authorKey = data.authors?.[0]?.key;
+        let authorName = "Unknown Author";
 
-  const updateRatings = (
-    comparisons: { winner: Book; loser: Book }[]
-  ): void => {
-    const updatedBooks: Book[] = [...books];
-    comparisons.forEach(({ winner, loser }) => {
-      const newRatings: { winner: number; loser: number } = calculateNewRatings(
-        winner,
-        loser
-      );
-      const winnerIndex: number = updatedBooks.findIndex(
-        (book) => book.id === winner.id
-      );
-      const loserIndex: number = updatedBooks.findIndex(
-        (book) => book.id === loser.id
-      );
-      updatedBooks[winnerIndex].rating = newRatings.winner;
-      updatedBooks[loserIndex].rating = newRatings.loser;
-    });
-    setBooks(updatedBooks);
-  };
+        // If we have an author key, fetch the author details
+        if (authorKey) {
+          const authorResponse = await fetch(`https://openlibrary.org${authorKey}.json`);
+          const authorData = await authorResponse.json();
+          authorName = authorData.name;
+        }
+        
+        setBookData({
+          title: data.title,
+          author: authorName,
+          coverUrl: `https://covers.openlibrary.org/b/isbn/${ISBN}-M.jpg`
+        });
+      } catch (error) {
+        console.error("Error fetching book data:", error);
+      }
+    };
 
-  const onDelete = (id: string): void => {
-    setBooks(books.filter((book) => book.id !== id));
-  };
+    fetchBookData();
+  }, []);
 
   return (
-    <main className="container mx-auto py-10">
-      <h1 className="text-4xl font-bold mb-8 text-center">
-        My Book Rating Library
-      </h1>
-      <Button onClick={() => setIsAddBookOpen(true)} className="mb-4">
-        Add Book
-      </Button>
-      <BookList books={books} onDelete={onDelete} />
-      <AddBookDialog
-        isOpen={isAddBookOpen}
-        onClose={() => setIsAddBookOpen(false)}
-        onAddBook={(book: Book) => addBook(book)}
-        onCompare={compareBooks}
-      />
-      <BookComparisonDialog
-        isOpen={isComparisonOpen}
-        onClose={() => setIsComparisonOpen(false)}
-        newBook={newBook}
-        existingBooks={books}
-        onUpdateRatings={updateRatings}
-      />
-      <BookComparison books={books} />
+    <main className="flex justify-start pl-[10%] md:pl-[20%]">
+      <div className="md:max-w-[420px] m-6 md:m-20 text-neutral font-[3800] mt-[100px] lg:mt-[180px]">
+        <div>
+          <h1 className="text-neutral-700 font-semibold pb-6">kshitij bantupalli jaeger</h1>
+          <p className="leading-[25px] pb-4 text-neutral-500">Senior software engineer at Mclean, VA working for Capital One.</p>
+          <p className="leading-[25px] pb-4 text-neutral-500 w-11/12">
+            I worked for various companies like Washington Post, Lowes and Caterpillar. 
+          </p>
+          <p className="leading-[25px] pb-4 text-neutral-500 w-11/12">
+            You can find out more about me <a className="text-neutral-900 border-b hover:text-neutral-400" href="https://www.linkedin.com/in/kshitijbantupalli/">here</a>, or you can read my resume <a className="text-neutral-900 border-b hover:text-neutral-400" href="/resume.pdf" download>here</a>.
+          </p>
+        </div>
+        <div className="mt-12 grid grid-cols-2 gap-8">
+          <div className="text-center">
+            <h2 className="text-neutral-700 font-semibold pb-4">Currently Watching</h2>
+            <div className="text-neutral-500">
+              <p className="leading-[25px]">Show Title</p>
+              <p className="text-sm">Platform • Genre</p>
+            </div>
+          </div>
+          <div className="text-center">
+            <h2 className="text-neutral-700 font-semibold pb-4">Currently Reading</h2>
+            <div className="text-neutral-500 flex flex-col items-center">
+              {bookData ? (
+                <>
+                  {bookData.coverUrl && (
+                    <img 
+                      src={bookData.coverUrl} 
+                      alt={bookData.title}
+                      className="w-32 h-auto mb-3 rounded shadow-sm"
+                    />
+                  )}
+                  <p className="leading-[25px] font-medium">{bookData.title}</p>
+                  <p className="text-sm text-neutral-400">{bookData.author}</p>
+                </>
+              ) : (
+                <p>Loading...</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
