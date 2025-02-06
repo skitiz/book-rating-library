@@ -50,7 +50,7 @@ export default function Home() {
           <h1 className="text-neutral-700 font-semibold pb-6">kshitij bantupalli jaeger</h1>
           <p className="leading-[25px] pb-4 text-neutral-500">Senior software engineer at Mclean, VA working for Capital One.</p>
           <p className="leading-[25px] pb-4 text-neutral-500 w-11/12">
-            I worked for various companies like Washington Post, Lowes and Caterpillar. 
+            I've worked for various companies like Washington Post, Lowes and Caterpillar. 
           </p>
           <p className="leading-[25px] pb-4 text-neutral-500 w-11/12">
             You can find out more about me <a className="text-neutral-900 border-b hover:text-neutral-400" href="https://www.linkedin.com/in/kshitijbantupalli/">here</a>, read my resume <a className="text-neutral-900 border-b hover:text-neutral-400" href="/resume.pdf" download>here</a>, or view my Github <a className="text-neutral-900 border-b hover:text-neutral-400" href="https://github.com/skitiz">here</a>.
