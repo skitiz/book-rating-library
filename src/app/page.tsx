@@ -53,7 +53,7 @@ export default function Home() {
             I worked for various companies like Washington Post, Lowes and Caterpillar. 
           </p>
           <p className="leading-[25px] pb-4 text-neutral-500 w-11/12">
-            You can find out more about me <a className="text-neutral-900 border-b hover:text-neutral-400" href="https://www.linkedin.com/in/kshitijbantupalli/">here</a>, or you can read my resume <a className="text-neutral-900 border-b hover:text-neutral-400" href="/resume.pdf" download>here</a>.
+            You can find out more about me <a className="text-neutral-900 border-b hover:text-neutral-400" href="https://www.linkedin.com/in/kshitijbantupalli/">here</a>, read my resume <a className="text-neutral-900 border-b hover:text-neutral-400" href="/resume.pdf" download>here</a>, or view my Github <a className="text-neutral-900 border-b hover:text-neutral-400" href="https://github.com/skitiz">here</a>.
           </p>
         </div>
         <div className="mt-12 grid grid-cols-2 gap-8">
