@@ -5,63 +5,77 @@ import { useState, useEffect } from "react";
 interface BookData {
   title: string;
   author: string;
-  coverUrl?: string;
+  coverUrl: string;
+  isbn: string;
 }
 
-interface ShowData {
-  title: string;
-  platform: string;
-  genre: string;
-}
+// Last 3 books read (front to back)
+const RECENT_BOOKS = [
+  { isbn: "9780063373860", title: "Yellowface", author: "R.F. Kuang" },
+  { isbn: "9780062662569", title: "The Poppy War", author: "R.F. Kuang" },
+  { isbn: "9781534441040", title: "Bloodmarked", author: "Tracy Deonn" },
+];
 
 export default function Home() {
-  const [bookData, setBookData] = useState<BookData | null>(null);
-  const [isLoadingBook, setIsLoadingBook] = useState(true);
-
-  const ISBN = "9780063373860";
-
-  // Placeholder data for Currently Watching - can be replaced with API later
-  const showData: ShowData = {
-    title: "The Bear",
-    platform: "Hulu",
-    genre: "Drama",
-  };
+  const [booksData, setBooksData] = useState<BookData[]>([]);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(true);
 
   useEffect(() => {
-    const fetchBookData = async () => {
-      setIsLoadingBook(true);
+    const fetchBooksData = async () => {
+      setIsLoadingBooks(true);
       try {
-        const response = await fetch(
-          `https://openlibrary.org/isbn/${ISBN}.json`
-        );
-        const data = await response.json();
+        const bookPromises = RECENT_BOOKS.map(async (book) => {
+          try {
+            const response = await fetch(
+              `https://openlibrary.org/isbn/${book.isbn}.json`
+            );
+            const data = await response.json();
 
-        // Get the first author key if available
-        const authorKey = data.authors?.[0]?.key;
-        let authorName = "Unknown Author";
+            // Get the first author key if available
+            const authorKey = data.authors?.[0]?.key;
+            let authorName = book.author; // fallback to our data
 
-        // If we have an author key, fetch the author details
-        if (authorKey) {
-          const authorResponse = await fetch(
-            `https://openlibrary.org${authorKey}.json`
-          );
-          const authorData = await authorResponse.json();
-          authorName = authorData.name;
-        }
+            // If we have an author key, fetch the author details
+            if (authorKey) {
+              try {
+                const authorResponse = await fetch(
+                  `https://openlibrary.org${authorKey}.json`
+                );
+                const authorData = await authorResponse.json();
+                authorName = authorData.name;
+              } catch {
+                // Use fallback author name
+              }
+            }
 
-        setBookData({
-          title: data.title,
-          author: authorName,
-          coverUrl: `https://covers.openlibrary.org/b/isbn/${ISBN}-M.jpg`,
+            return {
+              title: data.title || book.title,
+              author: authorName,
+              coverUrl: `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg`,
+              isbn: book.isbn,
+            };
+          } catch (error) {
+            console.error(`Error fetching book ${book.isbn}:`, error);
+            // Return fallback data
+            return {
+              title: book.title,
+              author: book.author,
+              coverUrl: `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg`,
+              isbn: book.isbn,
+            };
+          }
         });
+
+        const books = await Promise.all(bookPromises);
+        setBooksData(books);
       } catch (error) {
-        console.error("Error fetching book data:", error);
+        console.error("Error fetching books data:", error);
       } finally {
-        setIsLoadingBook(false);
+        setIsLoadingBooks(false);
       }
     };
 
-    fetchBookData();
+    fetchBooksData();
   }, []);
 
   return (
@@ -116,96 +130,75 @@ export default function Home() {
         {/* Divider */}
         <div className="border-t border-neutral-200 mb-16 md:mb-20"></div>
 
-        {/* Currently Watching & Reading Section */}
+        {/* Recent Reads Section */}
         <section>
           <h2 className="text-xl md:text-2xl font-semibold text-neutral-800 mb-8">
-            Currently Enjoying
+            Recent Reads
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-            {/* Currently Watching */}
-            <div className="group">
-              <h3 className="text-sm font-medium text-neutral-500 uppercase tracking-wide mb-4">
-                Watching
-              </h3>
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-neutral-200 hover:shadow-md transition-shadow duration-200">
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 w-16 h-16 bg-neutral-100 rounded flex items-center justify-center">
-                    <svg
-                      className="w-8 h-8 text-neutral-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-base font-medium text-neutral-900 mb-1">
-                      {showData.title}
-                    </p>
-                    <p className="text-sm text-neutral-500">
-                      {showData.platform} • {showData.genre}
-                    </p>
-                  </div>
-                </div>
+          {isLoadingBooks ? (
+            <div className="flex items-center justify-center h-96">
+              <div className="flex flex-col items-center space-y-3">
+                <div className="w-10 h-10 border-4 border-neutral-300 border-t-neutral-600 rounded-full animate-spin"></div>
+                <p className="text-sm text-neutral-400">Loading books...</p>
               </div>
             </div>
+          ) : booksData.length > 0 ? (
+            <div className="flex justify-center items-center py-8">
+              {/* Stacked Books Container */}
+              <div className="relative w-full max-w-md h-96 flex items-center justify-center">
+                {booksData.map((book, index) => {
+                  // Calculate positioning for stacked effect
+                  // Front book (index 0) is most prominent
+                  // Middle and back books are offset to the left and rotated
+                  const zIndex = booksData.length - index;
+                  const rotation = index === 0 ? 0 : index === 1 ? -8 : -12;
+                  const xOffset = index === 0 ? 0 : index === 1 ? -60 : -100;
+                  const yOffset = index === 0 ? 0 : index === 1 ? 10 : 15;
+                  const scale = index === 0 ? 1 : index === 1 ? 0.9 : 0.85;
+                  const opacity = index === 0 ? 1 : index === 1 ? 0.85 : 0.7;
 
-            {/* Currently Reading */}
-            <div className="group">
-              <h3 className="text-sm font-medium text-neutral-500 uppercase tracking-wide mb-4">
-                Reading
-              </h3>
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-neutral-200 hover:shadow-md transition-shadow duration-200">
-                {isLoadingBook ? (
-                  <div className="flex items-center justify-center h-48">
-                    <div className="flex flex-col items-center space-y-3">
-                      <div className="w-8 h-8 border-3 border-neutral-300 border-t-neutral-600 rounded-full animate-spin"></div>
-                      <p className="text-sm text-neutral-400">
-                        Loading book...
-                      </p>
-                    </div>
-                  </div>
-                ) : bookData ? (
-                  <div className="flex flex-col items-center">
-                    {bookData.coverUrl && (
-                      <div className="mb-4 group-hover:scale-105 transition-transform duration-200">
+                  return (
+                    <div
+                      key={book.isbn}
+                      className="absolute transition-all duration-300 hover:scale-105"
+                      style={{
+                        zIndex,
+                        transform: `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rotation}deg) scale(${scale})`,
+                        opacity,
+                      }}
+                    >
+                      <div className="bg-white rounded-lg shadow-xl border border-neutral-200 overflow-hidden">
                         <img
-                          src={bookData.coverUrl}
-                          alt={bookData.title}
-                          className="w-28 h-auto rounded shadow-md"
+                          src={book.coverUrl}
+                          alt={book.title}
+                          className="w-48 h-auto object-cover"
+                          loading="lazy"
                         />
                       </div>
-                    )}
-                    <p className="text-base font-medium text-neutral-900 text-center mb-1">
-                      {bookData.title}
-                    </p>
-                    <p className="text-sm text-neutral-500">
-                      {bookData.author}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-48">
-                    <p className="text-sm text-neutral-400">
-                      Unable to load book data
-                    </p>
-                  </div>
-                )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-center h-96">
+              <p className="text-sm text-neutral-400">
+                Unable to load books data
+              </p>
+            </div>
+          )}
+
+          {/* Book Details Below Stack */}
+          {!isLoadingBooks && booksData.length > 0 && (
+            <div className="mt-8 text-center">
+              <p className="text-sm text-neutral-500 mb-2">Most Recent:</p>
+              <p className="text-lg font-medium text-neutral-900">
+                {booksData[0].title}
+              </p>
+              <p className="text-sm text-neutral-600">{booksData[0].author}</p>
+            </div>
+          )}
         </section>
       </div>
     </main>
