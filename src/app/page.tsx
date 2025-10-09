@@ -13,7 +13,7 @@ interface BookData {
 const RECENT_BOOKS = [
   { isbn: "9780063373860", title: "Yellowface", author: "R.F. Kuang" },
   { isbn: "9780062662569", title: "The Poppy War", author: "R.F. Kuang" },
-  { isbn: "9781534441040", title: "Bloodmarked", author: "Tracy Deonn" },
+  { isbn: "9781534441033", title: "Bloodmarked", author: "Tracy Deonn" }, // Fixed ISBN
 ];
 
 export default function Home() {
@@ -137,43 +137,67 @@ export default function Home() {
           </h2>
 
           {isLoadingBooks ? (
-            <div className="flex items-center justify-center h-96">
+            <div className="flex items-center justify-center h-[500px]">
               <div className="flex flex-col items-center space-y-3">
                 <div className="w-10 h-10 border-4 border-neutral-300 border-t-neutral-600 rounded-full animate-spin"></div>
                 <p className="text-sm text-neutral-400">Loading books...</p>
               </div>
             </div>
           ) : booksData.length > 0 ? (
-            <div className="flex justify-center items-center py-8">
+            <div className="flex justify-center items-center py-12">
               {/* Stacked Books Container */}
-              <div className="relative w-full max-w-md h-96 flex items-center justify-center">
+              <div className="relative w-full max-w-2xl h-[500px] flex items-center justify-center">
                 {booksData.map((book, index) => {
                   // Calculate positioning for stacked effect
                   // Front book (index 0) is most prominent
                   // Middle and back books are offset to the left and rotated
-                  const zIndex = booksData.length - index;
-                  const rotation = index === 0 ? 0 : index === 1 ? -8 : -12;
-                  const xOffset = index === 0 ? 0 : index === 1 ? -60 : -100;
-                  const yOffset = index === 0 ? 0 : index === 1 ? 10 : 15;
-                  const scale = index === 0 ? 1 : index === 1 ? 0.9 : 0.85;
-                  const opacity = index === 0 ? 1 : index === 1 ? 0.85 : 0.7;
+                  const baseZIndex = booksData.length - index;
+                  const rotation = index === 0 ? 0 : index === 1 ? -6 : -10;
+                  const xOffset = index === 0 ? 0 : index === 1 ? -80 : -140;
+                  const yOffset = index === 0 ? 0 : index === 1 ? 20 : 30;
+                  const scale = index === 0 ? 1 : index === 1 ? 0.92 : 0.88;
+                  const opacity = index === 0 ? 1 : index === 1 ? 0.9 : 0.75;
 
                   return (
                     <div
                       key={book.isbn}
-                      className="absolute transition-all duration-300 hover:scale-105"
+                      className="absolute transition-all duration-500 ease-out cursor-pointer group/book"
                       style={{
-                        zIndex,
+                        zIndex: baseZIndex,
                         transform: `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rotation}deg) scale(${scale})`,
                         opacity,
                       }}
+                      onMouseEnter={(e) => {
+                        // Bring hovered book to front with dramatic flourish
+                        e.currentTarget.style.zIndex = "100";
+                        e.currentTarget.style.transform = `translateX(${xOffset}px) translateY(${
+                          yOffset - 30
+                        }px) rotate(0deg) scale(1.08)`;
+                        e.currentTarget.style.opacity = "1";
+                      }}
+                      onMouseLeave={(e) => {
+                        // Return to original position
+                        e.currentTarget.style.zIndex = baseZIndex.toString();
+                        e.currentTarget.style.transform = `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rotation}deg) scale(${scale})`;
+                        e.currentTarget.style.opacity = opacity.toString();
+                      }}
                     >
-                      <div className="bg-white rounded-lg shadow-xl border border-neutral-200 overflow-hidden">
+                      <div className="bg-white rounded-lg shadow-xl border border-neutral-200 overflow-hidden group-hover/book:shadow-2xl group-hover/book:ring-4 group-hover/book:ring-neutral-300/50 transition-all duration-500">
                         <img
                           src={book.coverUrl}
                           alt={book.title}
-                          className="w-48 h-auto object-cover"
+                          className="w-52 h-auto object-cover"
                           loading="lazy"
+                          onError={(e) => {
+                            // Fallback if image fails to load
+                            console.error(
+                              `Failed to load cover for ${book.title}`
+                            );
+                            const target = e.target as HTMLImageElement;
+                            target.src = `https://via.placeholder.com/400x600/e5e5e5/737373?text=${encodeURIComponent(
+                              book.title
+                            )}`;
+                          }}
                         />
                       </div>
                     </div>
@@ -182,7 +206,7 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-96">
+            <div className="flex items-center justify-center h-[500px]">
               <p className="text-sm text-neutral-400">
                 Unable to load books data
               </p>
