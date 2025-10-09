@@ -13,7 +13,7 @@ interface BookData {
 const RECENT_BOOKS = [
   { isbn: "9780063373860", title: "Yellowface", author: "R.F. Kuang" },
   { isbn: "9780062662569", title: "The Poppy War", author: "R.F. Kuang" },
-  { isbn: "9781534441033", title: "Bloodmarked", author: "Tracy Deonn" }, // Fixed ISBN
+  { isbn: "9781534441637", title: "Bloodmarked", author: "Tracy Deonn" },
 ];
 
 export default function Home() {
@@ -186,7 +186,7 @@ export default function Home() {
                         <img
                           src={book.coverUrl}
                           alt={book.title}
-                          className="w-52 h-auto object-cover"
+                          className="w-52 h-80 object-cover"
                           loading="lazy"
                           onError={(e) => {
                             // Fallback if image fails to load
@@ -194,7 +194,7 @@ export default function Home() {
                               `Failed to load cover for ${book.title}`
                             );
                             const target = e.target as HTMLImageElement;
-                            target.src = `https://via.placeholder.com/400x600/e5e5e5/737373?text=${encodeURIComponent(
+                            target.src = `https://via.placeholder.com/208x320/e5e5e5/737373?text=${encodeURIComponent(
                               book.title
                             )}`;
                           }}
