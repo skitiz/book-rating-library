@@ -182,11 +182,11 @@ export default function Home() {
                         e.currentTarget.style.opacity = opacity.toString();
                       }}
                     >
-                      <div className="bg-white rounded-lg shadow-xl border border-neutral-200 overflow-hidden group-hover/book:shadow-2xl group-hover/book:ring-4 group-hover/book:ring-neutral-300/50 transition-all duration-500">
+                      <div className="bg-neutral-50 rounded-lg shadow-xl border border-neutral-200 overflow-hidden group-hover/book:shadow-2xl group-hover/book:ring-4 group-hover/book:ring-neutral-300/50 transition-all duration-500 w-52 h-80 flex items-center justify-center">
                         <img
                           src={book.coverUrl}
                           alt={book.title}
-                          className="w-52 h-80 object-cover"
+                          className="max-w-full max-h-full object-contain"
                           loading="lazy"
                           onError={(e) => {
                             // Fallback if image fails to load
