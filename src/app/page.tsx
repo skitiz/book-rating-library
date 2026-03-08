@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 interface BookData {
   title: string;
@@ -11,9 +12,9 @@ interface BookData {
 
 // Last 3 books read (front to back)
 const RECENT_BOOKS = [
+  { isbn: "9780062662606", title: "The Dragon Republic", author: "R.F. Kuang" },
   { isbn: "9780063373860", title: "Yellowface", author: "R.F. Kuang" },
   { isbn: "9780062662569", title: "The Poppy War", author: "R.F. Kuang" },
-  { isbn: "9781534441637", title: "Bloodmarked", author: "Tracy Deonn" },
 ];
 
 export default function Home() {
@@ -89,11 +90,10 @@ export default function Home() {
 
           <div className="space-y-4 text-neutral-600 leading-relaxed max-w-2xl">
             <p>
-              Senior software engineer at Mclean, VA working for Capital One.
+              Software engineer in McLean, VA. I build things, read a lot, and obsess over FPL.
             </p>
             <p>
-              I&apos;ve worked for various companies like Washington Post, Lowes
-              and Caterpillar.
+              I&apos;ve worked for various companies like Capital One, Washington Post and Lowe&apos;s.
             </p>
             <p>
               You can find out more about me{" "}
@@ -137,7 +137,7 @@ export default function Home() {
           </h2>
 
           {isLoadingBooks ? (
-            <div className="flex items-center justify-center h-[500px]">
+            <div className="flex items-center justify-center h-[380px]">
               <div className="flex flex-col items-center space-y-3">
                 <div className="w-10 h-10 border-4 border-neutral-300 border-t-neutral-600 rounded-full animate-spin"></div>
                 <p className="text-sm text-neutral-400">Loading books...</p>
@@ -146,7 +146,7 @@ export default function Home() {
           ) : booksData.length > 0 ? (
             <div className="flex justify-center items-center py-12">
               {/* Stacked Books Container */}
-              <div className="relative w-full max-w-2xl h-[500px] flex items-center justify-center">
+              <div className="relative w-full max-w-2xl h-[380px] flex items-center justify-center">
                 {booksData.map((book, index) => {
                   // Calculate positioning for stacked effect
                   // Front book (index 0) is most prominent
@@ -168,21 +168,13 @@ export default function Home() {
                         opacity,
                       }}
                       onMouseEnter={(e) => {
-                        // Bring hovered book to front with dramatic flourish
-                        e.currentTarget.style.zIndex = "100";
-                        e.currentTarget.style.transform = `translateX(${xOffset}px) translateY(${
-                          yOffset - 30
-                        }px) rotate(0deg) scale(1.08)`;
-                        e.currentTarget.style.opacity = "1";
+                        e.currentTarget.style.transform = `translateX(${xOffset}px) translateY(${yOffset - 20}px) rotate(${rotation}deg) scale(${scale})`;
                       }}
                       onMouseLeave={(e) => {
-                        // Return to original position
-                        e.currentTarget.style.zIndex = baseZIndex.toString();
                         e.currentTarget.style.transform = `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rotation}deg) scale(${scale})`;
-                        e.currentTarget.style.opacity = opacity.toString();
                       }}
                     >
-                      <div className="bg-neutral-50 rounded-lg shadow-xl border border-neutral-200 overflow-hidden group-hover/book:shadow-2xl group-hover/book:ring-4 group-hover/book:ring-neutral-300/50 transition-all duration-500 w-52 h-80 flex items-center justify-center">
+                      <div className="bg-neutral-50 rounded-lg shadow-xl border border-neutral-200 overflow-hidden group-hover/book:shadow-2xl group-hover/book:ring-4 group-hover/book:ring-neutral-300/50 transition-all duration-500 w-40 h-60 flex items-center justify-center">
                         <img
                           src={book.coverUrl}
                           alt={book.title}
@@ -206,7 +198,7 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[500px]">
+            <div className="flex items-center justify-center h-[380px]">
               <p className="text-sm text-neutral-400">
                 Unable to load books data
               </p>
@@ -216,13 +208,58 @@ export default function Home() {
           {/* Book Details Below Stack */}
           {!isLoadingBooks && booksData.length > 0 && (
             <div className="mt-8 text-center">
-              <p className="text-sm text-neutral-500 mb-2">Most Recent:</p>
+              <p className="text-sm text-neutral-500 mb-2">Currently Reading:</p>
               <p className="text-lg font-medium text-neutral-900">
                 {booksData[0].title}
               </p>
               <p className="text-sm text-neutral-600">{booksData[0].author}</p>
             </div>
           )}
+        </section>
+
+        {/* Divider */}
+        <div className="border-t border-neutral-200 mb-16 md:mb-20 mt-16 md:mt-20"></div>
+
+        {/* Projects Section */}
+        <section className="mb-16 md:mb-20">
+          <h2 className="text-xl md:text-2xl font-semibold text-neutral-800 mb-6">
+            Projects
+          </h2>
+          <ul className="space-y-4">
+            <li className="flex flex-col gap-1">
+              <Link
+                href="/books"
+                className="text-neutral-900 font-medium border-b border-neutral-300 hover:border-neutral-900 transition-colors duration-200 w-fit"
+              >
+                Book Ranker
+              </Link>
+              <p className="text-sm text-neutral-500">
+                ELO-based ranking of every book I&apos;ve read. Tinder-style comparisons.
+              </p>
+            </li>
+            <li className="flex flex-col gap-1">
+              <Link
+                href="/games"
+                className="text-neutral-900 font-medium border-b border-neutral-300 hover:border-neutral-900 transition-colors duration-200 w-fit"
+              >
+                Game Ranker
+              </Link>
+              <p className="text-sm text-neutral-500">
+                Same mechanic for video games, with structured reviews.
+              </p>
+            </li>
+          </ul>
+        </section>
+
+        {/* Divider */}
+        <div className="border-t border-neutral-200 mb-16 md:mb-20"></div>
+
+        {/* Writing Section */}
+        <section>
+          <h2 className="text-xl md:text-2xl font-semibold text-neutral-800 mb-4">
+            Writing
+          </h2>
+          <p className="text-sm text-neutral-400">Coming soon.</p>
         </section>
       </div>
     </main>
