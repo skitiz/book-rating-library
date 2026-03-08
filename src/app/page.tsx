@@ -154,7 +154,7 @@ export default function Home() {
                 Game Ranker
               </Link>
               <p className="text-sm text-neutral-500">
-                Same mechanic for video games, with structured reviews.
+                ELO-based ranking of every game I&apos;ve played, with structured reviews.
               </p>
             </li>
           </ul>
