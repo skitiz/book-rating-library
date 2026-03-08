@@ -64,6 +64,7 @@ export default function BooksPage() {
   const [pair, setPair] = useState<[RankedBook, RankedBook] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [newBook, setNewBook] = useState({ title: "", author: "", isbn: "" });
+  const [editBook, setEditBook] = useState<RankedBook | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Load from localStorage or seed
@@ -258,11 +259,21 @@ export default function BooksPage() {
                   <p className="font-semibold text-neutral-900 truncate">{book.title}</p>
                   <p className="text-sm text-neutral-500">{book.author}</p>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="inline-block bg-neutral-100 text-neutral-700 text-sm font-mono font-medium px-3 py-1 rounded-full">
-                    {book.elo}
-                  </span>
-                  <p className="text-xs text-neutral-400 mt-1">{book.comparisonCount} comparisons</p>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-right">
+                    <span className="inline-block bg-neutral-100 text-neutral-700 text-sm font-mono font-medium px-3 py-1 rounded-full">
+                      {book.elo}
+                    </span>
+                    <p className="text-xs text-neutral-400 mt-1">{book.comparisonCount} comparisons</p>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setEditBook(book)}
+                      className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors px-2 py-1 rounded hover:bg-neutral-100"
+                    >
+                      Edit
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -317,6 +328,45 @@ export default function BooksPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Book Dialog */}
+      {editBook && (
+        <Dialog open={true} onOpenChange={() => setEditBook(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Book</DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                setBooks((prev) =>
+                  prev.map((b) =>
+                    b.id === editBook.id
+                      ? { ...b, title: (fd.get("title") as string).trim(), author: (fd.get("author") as string).trim() }
+                      : b
+                  )
+                );
+                setEditBook(null);
+              }}
+            >
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="e-title" className="text-right">Title</Label>
+                  <Input id="e-title" name="title" defaultValue={editBook.title} className="col-span-3" required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="e-author" className="text-right">Author</Label>
+                  <Input id="e-author" name="author" defaultValue={editBook.author} className="col-span-3" required />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Save</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </main>
   );
 }
