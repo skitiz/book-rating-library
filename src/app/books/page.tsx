@@ -91,7 +91,7 @@ export default function BooksPage() {
   }, [books]);
 
   useEffect(() => {
-    localStorage.setItem(PAIRS_KEY, JSON.stringify([...completedPairs]));
+    localStorage.setItem(PAIRS_KEY, JSON.stringify(Array.from(completedPairs)));
   }, [completedPairs]);
 
   // Pick next pair whenever books or completedPairs change
@@ -102,7 +102,7 @@ export default function BooksPage() {
   const handleVote = useCallback(
     (winnerId: string, loserId: string) => {
       const key = pairKey(winnerId, loserId);
-      setCompletedPairs((prev) => new Set([...prev, key]));
+      setCompletedPairs((prev) => new Set(Array.from(prev).concat(key)));
       setBooks((prev) => {
         const next = prev.map((b) => ({ ...b }));
         const winner = next.find((b) => b.id === winnerId)!;

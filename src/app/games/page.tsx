@@ -60,7 +60,7 @@ export default function GamesPage() {
   }, [games]);
 
   useEffect(() => {
-    localStorage.setItem(PAIRS_KEY, JSON.stringify([...completedPairs]));
+    localStorage.setItem(PAIRS_KEY, JSON.stringify(Array.from(completedPairs)));
   }, [completedPairs]);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function GamesPage() {
 
   const handleVote = useCallback((winnerId: string, loserId: string) => {
     const key = pairKey(winnerId, loserId);
-    setCompletedPairs((prev) => new Set([...prev, key]));
+    setCompletedPairs((prev) => new Set(Array.from(prev).concat(key)));
     setGames((prev) => {
       const next = prev.map((g) => ({ ...g }));
       const winner = next.find((g) => g.id === winnerId)!;
