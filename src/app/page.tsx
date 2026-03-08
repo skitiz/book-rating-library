@@ -1,84 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-
-interface BookData {
-  title: string;
-  author: string;
-  coverUrl: string;
-  isbn: string;
-}
 
 // Last 3 books read (front to back)
 const RECENT_BOOKS = [
-  { isbn: "9780062662606", title: "The Dragon Republic", author: "R.F. Kuang" },
+  { isbn: "9780062662637", title: "The Dragon Republic", author: "R.F. Kuang" },
   { isbn: "9780063373860", title: "Yellowface", author: "R.F. Kuang" },
-  { isbn: "9780062662569", title: "The Poppy War", author: "R.F. Kuang" },
+  { isbn: "9780062662583", title: "The Poppy War", author: "R.F. Kuang" },
 ];
 
+const booksData = RECENT_BOOKS.map((book) => ({
+  ...book,
+  coverUrl: `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg`,
+}));
+
 export default function Home() {
-  const [booksData, setBooksData] = useState<BookData[]>([]);
-  const [isLoadingBooks, setIsLoadingBooks] = useState(true);
-
-  useEffect(() => {
-    const fetchBooksData = async () => {
-      setIsLoadingBooks(true);
-      try {
-        const bookPromises = RECENT_BOOKS.map(async (book) => {
-          try {
-            const response = await fetch(
-              `https://openlibrary.org/isbn/${book.isbn}.json`
-            );
-            const data = await response.json();
-
-            // Get the first author key if available
-            const authorKey = data.authors?.[0]?.key;
-            let authorName = book.author; // fallback to our data
-
-            // If we have an author key, fetch the author details
-            if (authorKey) {
-              try {
-                const authorResponse = await fetch(
-                  `https://openlibrary.org${authorKey}.json`
-                );
-                const authorData = await authorResponse.json();
-                authorName = authorData.name;
-              } catch {
-                // Use fallback author name
-              }
-            }
-
-            return {
-              title: data.title || book.title,
-              author: authorName,
-              coverUrl: `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg`,
-              isbn: book.isbn,
-            };
-          } catch (error) {
-            console.error(`Error fetching book ${book.isbn}:`, error);
-            // Return fallback data
-            return {
-              title: book.title,
-              author: book.author,
-              coverUrl: `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg`,
-              isbn: book.isbn,
-            };
-          }
-        });
-
-        const books = await Promise.all(bookPromises);
-        setBooksData(books);
-      } catch (error) {
-        console.error("Error fetching books data:", error);
-      } finally {
-        setIsLoadingBooks(false);
-      }
-    };
-
-    fetchBooksData();
-  }, []);
-
   return (
     <main className="min-h-screen bg-neutral-50">
       <div className="max-w-4xl mx-auto px-6 md:px-12 py-16 md:py-24">
@@ -136,85 +72,58 @@ export default function Home() {
             Recent Reads
           </h2>
 
-          {isLoadingBooks ? (
-            <div className="flex items-center justify-center h-[380px]">
-              <div className="flex flex-col items-center space-y-3">
-                <div className="w-10 h-10 border-4 border-neutral-300 border-t-neutral-600 rounded-full animate-spin"></div>
-                <p className="text-sm text-neutral-400">Loading books...</p>
-              </div>
-            </div>
-          ) : booksData.length > 0 ? (
-            <div className="flex justify-center items-center py-12">
-              {/* Stacked Books Container */}
-              <div className="relative w-full max-w-2xl h-[380px] flex items-center justify-center">
-                {booksData.map((book, index) => {
-                  // Calculate positioning for stacked effect
-                  // Front book (index 0) is most prominent
-                  // Middle and back books are offset to the left and rotated
-                  const baseZIndex = booksData.length - index;
-                  const rotation = index === 0 ? 0 : index === 1 ? -6 : -10;
-                  const xOffset = index === 0 ? 0 : index === 1 ? -80 : -140;
-                  const yOffset = index === 0 ? 0 : index === 1 ? 20 : 30;
-                  const scale = index === 0 ? 1 : index === 1 ? 0.92 : 0.88;
-                  const opacity = index === 0 ? 1 : index === 1 ? 0.9 : 0.75;
+          <div className="flex justify-center items-center py-12">
+            {/* Stacked Books Container */}
+            <div className="relative w-full max-w-2xl h-[380px] flex items-center justify-center">
+              {booksData.map((book, index) => {
+                const baseZIndex = booksData.length - index;
+                const rotation = index === 0 ? 0 : index === 1 ? -6 : -10;
+                const xOffset = index === 0 ? 0 : index === 1 ? -80 : -140;
+                const yOffset = index === 0 ? 0 : index === 1 ? 20 : 30;
+                const scale = index === 0 ? 1 : index === 1 ? 0.92 : 0.88;
+                const opacity = index === 0 ? 1 : index === 1 ? 0.9 : 0.75;
 
-                  return (
-                    <div
-                      key={book.isbn}
-                      className="absolute transition-all duration-500 ease-out cursor-pointer group/book"
-                      style={{
-                        zIndex: baseZIndex,
-                        transform: `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rotation}deg) scale(${scale})`,
-                        opacity,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = `translateX(${xOffset}px) translateY(${yOffset - 20}px) rotate(${rotation}deg) scale(${scale})`;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rotation}deg) scale(${scale})`;
-                      }}
-                    >
-                      <div className="bg-neutral-50 rounded-lg shadow-xl border border-neutral-200 overflow-hidden group-hover/book:shadow-2xl group-hover/book:ring-4 group-hover/book:ring-neutral-300/50 transition-all duration-500 w-40 h-60 flex items-center justify-center">
-                        <img
-                          src={book.coverUrl}
-                          alt={book.title}
-                          className="max-w-full max-h-full object-contain"
-                          loading="lazy"
-                          onError={(e) => {
-                            // Fallback if image fails to load
-                            console.error(
-                              `Failed to load cover for ${book.title}`
-                            );
-                            const target = e.target as HTMLImageElement;
-                            target.src = `https://via.placeholder.com/208x320/e5e5e5/737373?text=${encodeURIComponent(
-                              book.title
-                            )}`;
-                          }}
-                        />
-                      </div>
+                return (
+                  <div
+                    key={book.isbn}
+                    className="absolute transition-all duration-500 ease-out cursor-pointer group/book"
+                    style={{
+                      zIndex: baseZIndex,
+                      transform: `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rotation}deg) scale(${scale})`,
+                      opacity,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = `translateX(${xOffset}px) translateY(${yOffset - 20}px) rotate(${rotation}deg) scale(${scale})`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rotation}deg) scale(${scale})`;
+                    }}
+                  >
+                    <div className="bg-neutral-50 rounded-lg shadow-xl border border-neutral-200 overflow-hidden group-hover/book:shadow-2xl group-hover/book:ring-4 group-hover/book:ring-neutral-300/50 transition-all duration-500 w-40 h-60 flex items-center justify-center">
+                      <img
+                        src={book.coverUrl}
+                        alt={book.title}
+                        className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://via.placeholder.com/208x320/e5e5e5/737373?text=${encodeURIComponent(book.title)}`;
+                        }}
+                      />
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
-          ) : (
-            <div className="flex items-center justify-center h-[380px]">
-              <p className="text-sm text-neutral-400">
-                Unable to load books data
-              </p>
-            </div>
-          )}
+          </div>
 
           {/* Book Details Below Stack */}
-          {!isLoadingBooks && booksData.length > 0 && (
-            <div className="mt-8 text-center">
-              <p className="text-sm text-neutral-500 mb-2">Currently Reading:</p>
-              <p className="text-lg font-medium text-neutral-900">
-                {booksData[0].title}
-              </p>
-              <p className="text-sm text-neutral-600">{booksData[0].author}</p>
-            </div>
-          )}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-neutral-500 mb-2">Currently Reading:</p>
+            <p className="text-lg font-medium text-neutral-900">
+              {booksData[0].title}
+            </p>
+            <p className="text-sm text-neutral-600">{booksData[0].author}</p>
+          </div>
         </section>
 
         {/* Divider */}

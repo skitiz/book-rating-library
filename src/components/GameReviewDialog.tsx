@@ -35,7 +35,7 @@ interface GameReviewDialogProps {
 
 const EMPTY_FORM = {
   title: "",
-  platform: "",
+  platform: "PC",
   coverUrl: "",
   loved: "",
   hated: "",

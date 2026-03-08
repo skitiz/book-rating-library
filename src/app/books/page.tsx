@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { updateElo } from "@/lib/elo";
 import CompareCard from "@/components/CompareCard";
+import { AdminGate } from "@/components/AdminGate";
 import {
   Dialog,
   DialogContent,
@@ -25,34 +26,45 @@ interface RankedBook {
 }
 
 const STORAGE_KEY = "elo-books";
+const PAIRS_KEY = "elo-books-pairs";
 
 const SEED_BOOKS: RankedBook[] = [
-  { id: "1", title: "The Dragon Republic", author: "R.F. Kuang", isbn: "9780062662606", elo: 1000, comparisonCount: 0 },
+  { id: "1", title: "The Dragon Republic", author: "R.F. Kuang", isbn: "9780062662637", elo: 1000, comparisonCount: 0 },
   { id: "2", title: "Yellowface", author: "R.F. Kuang", isbn: "9780063373860", elo: 1000, comparisonCount: 0 },
-  { id: "3", title: "The Poppy War", author: "R.F. Kuang", isbn: "9780062662569", elo: 1000, comparisonCount: 0 },
+  { id: "3", title: "The Poppy War", author: "R.F. Kuang", isbn: "9780062662583", elo: 1000, comparisonCount: 0 },
   { id: "4", title: "Bloodmarked", author: "Tracy Deonn", isbn: "9781534441637", elo: 1000, comparisonCount: 0 },
 ];
+
+function pairKey(a: string, b: string): string {
+  return [a, b].sort().join("-");
+}
+
+function totalPairs(n: number): number {
+  return (n * (n - 1)) / 2;
+}
+
+function pickNextPair(items: RankedBook[], completedPairs: Set<string>): [RankedBook, RankedBook] | null {
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const key = pairKey(items[i].id, items[j].id);
+      if (!completedPairs.has(key)) return [items[i], items[j]];
+    }
+  }
+  return null;
+}
 
 function coverUrl(isbn: string) {
   return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
 }
 
-function pickPair(books: RankedBook[]): [RankedBook, RankedBook] | null {
-  if (books.length < 2) return null;
-  const sorted = [...books].sort((a, b) => a.comparisonCount - b.comparisonCount);
-  const a = sorted[0];
-  // pick a random second book (not the same)
-  const candidates = books.filter((b) => b.id !== a.id);
-  const b = candidates[Math.floor(Math.random() * candidates.length)];
-  return [a, b];
-}
-
 export default function BooksPage() {
   const [books, setBooks] = useState<RankedBook[]>([]);
-  const [view, setView] = useState<"compare" | "rankings">("compare");
+  const [completedPairs, setCompletedPairs] = useState<Set<string>>(new Set());
+  const [view, setView] = useState<"compare" | "rankings">("rankings");
   const [pair, setPair] = useState<[RankedBook, RankedBook] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [newBook, setNewBook] = useState({ title: "", author: "", isbn: "" });
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Load from localStorage or seed
   useEffect(() => {
@@ -61,8 +73,13 @@ export default function BooksPage() {
       const parsed: RankedBook[] = stored ? JSON.parse(stored) : [];
       const data = parsed.length > 0 ? parsed : SEED_BOOKS;
       setBooks(data);
+
+      const storedPairs = localStorage.getItem(PAIRS_KEY);
+      const parsedPairs: string[] = storedPairs ? JSON.parse(storedPairs) : [];
+      setCompletedPairs(new Set(parsedPairs));
     } catch {
       setBooks(SEED_BOOKS);
+      setCompletedPairs(new Set());
     }
   }, []);
 
@@ -73,20 +90,21 @@ export default function BooksPage() {
     }
   }, [books]);
 
-  // Pick new pair whenever books change
   useEffect(() => {
-    setPair(pickPair(books));
-  }, [books]);
+    localStorage.setItem(PAIRS_KEY, JSON.stringify([...completedPairs]));
+  }, [completedPairs]);
+
+  // Pick next pair whenever books or completedPairs change
+  useEffect(() => {
+    setPair(pickNextPair(books, completedPairs));
+  }, [books, completedPairs]);
 
   const handleVote = useCallback(
     (winnerId: string, loserId: string) => {
+      const key = pairKey(winnerId, loserId);
+      setCompletedPairs((prev) => new Set([...prev, key]));
       setBooks((prev) => {
-        const next = prev.map((b) => {
-          if (b.id === winnerId || b.id === loserId) {
-            return { ...b }; // clone
-          }
-          return b;
-        });
+        const next = prev.map((b) => ({ ...b }));
         const winner = next.find((b) => b.id === winnerId)!;
         const loser = next.find((b) => b.id === loserId)!;
         const [newWinnerElo, newLoserElo] = updateElo(winner.elo, loser.elo);
@@ -99,6 +117,11 @@ export default function BooksPage() {
     },
     []
   );
+
+  const handleRerank = () => {
+    setCompletedPairs(new Set());
+    setBooks((prev) => prev.map((b) => ({ ...b, elo: 1000, comparisonCount: 0 })));
+  };
 
   const handleAddBook = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,6 +140,9 @@ export default function BooksPage() {
   };
 
   const sorted = [...books].sort((a, b) => b.elo - a.elo);
+  const total = totalPairs(books.length);
+  const done = completedPairs.size;
+  const rankingComplete = books.length >= 2 && pair === null;
 
   return (
     <main className="min-h-screen bg-neutral-50">
@@ -138,32 +164,46 @@ export default function BooksPage() {
                 ELO-based rankings. Pick the better book.
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={view === "compare" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setView("compare")}
-              >
-                Compare
-              </Button>
-              <Button
-                variant={view === "rankings" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setView("rankings")}
-              >
-                Rankings
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
-                + Add Book
-              </Button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <>
+                  <Button
+                    variant={view === "compare" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setView("compare")}
+                  >
+                    Compare
+                  </Button>
+                  <Button
+                    variant={view === "rankings" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setView("rankings")}
+                  >
+                    Rankings
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
+                    + Add Book
+                  </Button>
+                </>
+              )}
+              {!isAdmin && (
+                <span className="text-sm text-neutral-500 font-medium">Rankings</span>
+              )}
+              <AdminGate onAdminChange={setIsAdmin} />
             </div>
           </div>
         </div>
 
-        {/* Compare view */}
-        {view === "compare" && (
+        {/* Compare view (admin only) */}
+        {isAdmin && view === "compare" && (
           <div className="flex flex-col items-center gap-8">
-            {pair ? (
+            {rankingComplete ? (
+              <div className="text-center py-12">
+                <p className="text-lg font-semibold text-neutral-800 mb-2">Ranking complete!</p>
+                <p className="text-sm text-neutral-500 mb-6">All {total} comparisons done.</p>
+                <Button variant="outline" onClick={handleRerank}>Re-rank</Button>
+              </div>
+            ) : pair ? (
               <>
                 <p className="text-neutral-600 text-sm font-medium">
                   Which book is better?
@@ -184,7 +224,7 @@ export default function BooksPage() {
                   />
                 </div>
                 <p className="text-xs text-neutral-400">
-                  {books.reduce((sum, b) => sum + b.comparisonCount, 0) / 2} comparisons total
+                  {done} of {total} comparisons
                 </p>
               </>
             ) : (
@@ -194,7 +234,7 @@ export default function BooksPage() {
         )}
 
         {/* Rankings view */}
-        {view === "rankings" && (
+        {(!isAdmin || view === "rankings") && (
           <div className="space-y-3">
             {sorted.map((book, index) => (
               <div
@@ -230,7 +270,7 @@ export default function BooksPage() {
         )}
       </div>
 
-      {/* Add Book Dialog */}
+      {/* Add Book Dialog (admin only) */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
           <DialogHeader>
@@ -262,7 +302,7 @@ export default function BooksPage() {
                 <Label htmlFor="b-isbn" className="text-right">ISBN</Label>
                 <Input
                   id="b-isbn"
-                  placeholder="e.g. 9780062662606"
+                  placeholder="e.g. 9780062662637"
                   value={newBook.isbn}
                   onChange={(e) => setNewBook((p) => ({ ...p, isbn: e.target.value }))}
                   className="col-span-3"

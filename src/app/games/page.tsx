@@ -4,84 +4,72 @@ import { useState, useEffect, useCallback } from "react";
 import { updateElo } from "@/lib/elo";
 import CompareCard from "@/components/CompareCard";
 import GameReviewDialog, { RankedGame } from "@/components/GameReviewDialog";
+import { AdminGate } from "@/components/AdminGate";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 const STORAGE_KEY = "elo-games";
+const PAIRS_KEY = "elo-games-pairs";
 
-const SEED_GAMES: RankedGame[] = [
-  {
-    id: "1",
-    title: "Elden Ring",
-    platform: "PC",
-    coverUrl: "https://upload.wikimedia.org/wikipedia/en/b/b9/Elden_Ring_Box_art.jpg",
-    elo: 1000,
-    comparisonCount: 0,
-  },
-  {
-    id: "2",
-    title: "The Last of Us Part II",
-    platform: "PS5",
-    coverUrl: "https://upload.wikimedia.org/wikipedia/en/4/4f/TLOU_P2_Box_Art_2.png",
-    elo: 1000,
-    comparisonCount: 0,
-  },
-  {
-    id: "3",
-    title: "Hollow Knight",
-    platform: "PC",
-    coverUrl: "https://upload.wikimedia.org/wikipedia/en/3/37/Hollow_Knight_cover.jpg",
-    elo: 1000,
-    comparisonCount: 0,
-  },
-  {
-    id: "4",
-    title: "Celeste",
-    platform: "Switch",
-    coverUrl: "https://upload.wikimedia.org/wikipedia/en/0/0f/Celeste_box_art_full.png",
-    elo: 1000,
-    comparisonCount: 0,
-  },
-];
+const SEED_GAMES: RankedGame[] = [];
 
-function pickPair(games: RankedGame[]): [RankedGame, RankedGame] | null {
-  if (games.length < 2) return null;
-  const sorted = [...games].sort((a, b) => a.comparisonCount - b.comparisonCount);
-  const a = sorted[0];
-  const candidates = games.filter((g) => g.id !== a.id);
-  const b = candidates[Math.floor(Math.random() * candidates.length)];
-  return [a, b];
+function pairKey(a: string, b: string): string {
+  return [a, b].sort().join("-");
+}
+
+function totalPairs(n: number): number {
+  return (n * (n - 1)) / 2;
+}
+
+function pickNextPair(items: RankedGame[], completedPairs: Set<string>): [RankedGame, RankedGame] | null {
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const key = pairKey(items[i].id, items[j].id);
+      if (!completedPairs.has(key)) return [items[i], items[j]];
+    }
+  }
+  return null;
 }
 
 export default function GamesPage() {
   const [games, setGames] = useState<RankedGame[]>([]);
-  const [view, setView] = useState<"compare" | "rankings">("compare");
+  const [completedPairs, setCompletedPairs] = useState<Set<string>>(new Set());
+  const [view, setView] = useState<"compare" | "rankings">("rankings");
   const [pair, setPair] = useState<[RankedGame, RankedGame] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editGame, setEditGame] = useState<RankedGame | undefined>(undefined);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       const parsed: RankedGame[] = stored ? JSON.parse(stored) : [];
       setGames(parsed.length > 0 ? parsed : SEED_GAMES);
+
+      const storedPairs = localStorage.getItem(PAIRS_KEY);
+      const parsedPairs: string[] = storedPairs ? JSON.parse(storedPairs) : [];
+      setCompletedPairs(new Set(parsedPairs));
     } catch {
       setGames(SEED_GAMES);
+      setCompletedPairs(new Set());
     }
   }, []);
 
   useEffect(() => {
-    if (games.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
   }, [games]);
 
   useEffect(() => {
-    setPair(pickPair(games));
-  }, [games]);
+    localStorage.setItem(PAIRS_KEY, JSON.stringify([...completedPairs]));
+  }, [completedPairs]);
+
+  useEffect(() => {
+    setPair(pickNextPair(games, completedPairs));
+  }, [games, completedPairs]);
 
   const handleVote = useCallback((winnerId: string, loserId: string) => {
+    const key = pairKey(winnerId, loserId);
+    setCompletedPairs((prev) => new Set([...prev, key]));
     setGames((prev) => {
       const next = prev.map((g) => ({ ...g }));
       const winner = next.find((g) => g.id === winnerId)!;
@@ -104,7 +92,15 @@ export default function GamesPage() {
     setEditGame(undefined);
   };
 
+  const handleRerank = () => {
+    setCompletedPairs(new Set());
+    setGames((prev) => prev.map((g) => ({ ...g, elo: 1000, comparisonCount: 0 })));
+  };
+
   const sorted = [...games].sort((a, b) => b.elo - a.elo);
+  const total = totalPairs(games.length);
+  const done = completedPairs.size;
+  const rankingComplete = games.length >= 2 && pair === null;
 
   return (
     <main className="min-h-screen bg-neutral-50">
@@ -126,32 +122,46 @@ export default function GamesPage() {
                 ELO-based rankings with structured reviews.
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={view === "compare" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setView("compare")}
-              >
-                Compare
-              </Button>
-              <Button
-                variant={view === "rankings" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setView("rankings")}
-              >
-                Rankings
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
-                + Add Game
-              </Button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <>
+                  <Button
+                    variant={view === "compare" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setView("compare")}
+                  >
+                    Compare
+                  </Button>
+                  <Button
+                    variant={view === "rankings" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setView("rankings")}
+                  >
+                    Rankings
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
+                    + Add Game
+                  </Button>
+                </>
+              )}
+              {!isAdmin && (
+                <span className="text-sm text-neutral-500 font-medium">Rankings</span>
+              )}
+              <AdminGate onAdminChange={setIsAdmin} />
             </div>
           </div>
         </div>
 
-        {/* Compare view */}
-        {view === "compare" && (
+        {/* Compare view (admin only) */}
+        {isAdmin && view === "compare" && (
           <div className="flex flex-col items-center gap-8">
-            {pair ? (
+            {rankingComplete ? (
+              <div className="text-center py-12">
+                <p className="text-lg font-semibold text-neutral-800 mb-2">Ranking complete!</p>
+                <p className="text-sm text-neutral-500 mb-6">All {total} comparisons done.</p>
+                <Button variant="outline" onClick={handleRerank}>Re-rank</Button>
+              </div>
+            ) : pair ? (
               <>
                 <p className="text-neutral-600 text-sm font-medium">
                   Which game is better?
@@ -159,20 +169,20 @@ export default function GamesPage() {
                 <div className="flex flex-col sm:flex-row gap-6 items-center justify-center w-full">
                   <CompareCard
                     title={pair[0].title}
-                    subtitle={pair[0].platform}
+                    subtitle="PC"
                     coverUrl={pair[0].coverUrl}
                     onClick={() => handleVote(pair[0].id, pair[1].id)}
                   />
                   <span className="text-xl font-bold text-neutral-300">vs</span>
                   <CompareCard
                     title={pair[1].title}
-                    subtitle={pair[1].platform}
+                    subtitle="PC"
                     coverUrl={pair[1].coverUrl}
                     onClick={() => handleVote(pair[1].id, pair[0].id)}
                   />
                 </div>
                 <p className="text-xs text-neutral-400">
-                  {games.reduce((sum, g) => sum + g.comparisonCount, 0) / 2} comparisons total
+                  {done} of {total} comparisons
                 </p>
               </>
             ) : (
@@ -182,14 +192,14 @@ export default function GamesPage() {
         )}
 
         {/* Rankings view */}
-        {view === "rankings" && (
+        {(!isAdmin || view === "rankings") && (
           <div className="space-y-3">
+            {sorted.length === 0 && (
+              <p className="text-neutral-400 text-sm">No games yet.</p>
+            )}
             {sorted.map((game, index) => (
               <div key={game.id} className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-                <div
-                  className="flex items-center gap-4 p-4 hover:bg-neutral-50 cursor-pointer transition-colors"
-                  onClick={() => setExpandedId(expandedId === game.id ? null : game.id)}
-                >
+                <div className="flex items-center gap-4 p-4">
                   <span className="text-2xl font-bold text-neutral-200 w-8 text-center shrink-0">
                     {index + 1}
                   </span>
@@ -211,7 +221,6 @@ export default function GamesPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-neutral-900 truncate">{game.title}</p>
-                    <p className="text-sm text-neutral-500">{game.platform}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <div className="text-right">
@@ -220,52 +229,41 @@ export default function GamesPage() {
                       </span>
                       <p className="text-xs text-neutral-400 mt-1">{game.comparisonCount} comparisons</p>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditGame(game);
-                      }}
-                      className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors px-2 py-1 rounded hover:bg-neutral-100"
-                    >
-                      Edit
-                    </button>
-                    <span className="text-neutral-300 text-xs">
-                      {expandedId === game.id ? "▲" : "▼"}
-                    </span>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setEditGame(game)}
+                        className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors px-2 py-1 rounded hover:bg-neutral-100"
+                      >
+                        Edit
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Expandable review */}
-                {expandedId === game.id && game.review && (
-                  <div className="border-t border-neutral-100 px-6 py-4 grid gap-3">
-                    {game.review.loved && (
-                      <div>
-                        <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Loved</p>
-                        <p className="text-sm text-neutral-700">{game.review.loved}</p>
-                      </div>
-                    )}
-                    {game.review.hated && (
-                      <div>
-                        <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-1">Hated</p>
-                        <p className="text-sm text-neutral-700">{game.review.hated}</p>
-                      </div>
-                    )}
-                    {game.review.feltWeird && (
-                      <div>
-                        <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide mb-1">Felt Weird</p>
-                        <p className="text-sm text-neutral-700">{game.review.feltWeird}</p>
-                      </div>
-                    )}
-                    {!game.review.loved && !game.review.hated && !game.review.feltWeird && (
-                      <p className="text-sm text-neutral-400 italic">No review written yet.</p>
-                    )}
-                  </div>
-                )}
-                {expandedId === game.id && !game.review && (
-                  <div className="border-t border-neutral-100 px-6 py-4">
-                    <p className="text-sm text-neutral-400 italic">No review written yet.</p>
-                  </div>
-                )}
+                {/* Always-visible review */}
+                <div className="border-t border-neutral-100 px-6 py-3 grid gap-2">
+                  {game.review?.loved && (
+                    <div>
+                      <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Loved</p>
+                      <p className="text-sm text-neutral-700">{game.review.loved}</p>
+                    </div>
+                  )}
+                  {game.review?.hated && (
+                    <div>
+                      <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-1">Hated</p>
+                      <p className="text-sm text-neutral-700">{game.review.hated}</p>
+                    </div>
+                  )}
+                  {game.review?.feltWeird && (
+                    <div>
+                      <p className="text-xs font-semibold text-amber-500 uppercase tracking-wide mb-1">Felt Weird</p>
+                      <p className="text-sm text-neutral-700">{game.review.feltWeird}</p>
+                    </div>
+                  )}
+                  {(!game.review || (!game.review.loved && !game.review.hated && !game.review.feltWeird)) && (
+                    <p className="text-xs text-neutral-400 italic">No review yet.</p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
