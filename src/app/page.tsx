@@ -143,7 +143,7 @@ export default function Home() {
                 Book Ranker
               </Link>
               <p className="text-sm text-neutral-500">
-                ELO-based ranking of every book I&apos;ve read. Tinder-style comparisons.
+                ELO-based ranking of every book I&apos;ve read.
               </p>
             </li>
             <li className="flex flex-col gap-1">
