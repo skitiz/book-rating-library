@@ -21,6 +21,7 @@ interface RankedBook {
   title: string;
   author: string;
   isbn: string;
+  coverUrl?: string;
   elo: number;
   comparisonCount: number;
 }
@@ -53,8 +54,8 @@ function pickNextPair(items: RankedBook[], completedPairs: Set<string>): [Ranked
   return null;
 }
 
-function coverUrl(isbn: string) {
-  return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
+function coverUrl(book: RankedBook) {
+  return book.coverUrl?.trim() || `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg`;
 }
 
 export default function BooksPage() {
@@ -63,7 +64,7 @@ export default function BooksPage() {
   const [view, setView] = useState<"compare" | "rankings">("rankings");
   const [pair, setPair] = useState<[RankedBook, RankedBook] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [newBook, setNewBook] = useState({ title: "", author: "", isbn: "" });
+  const [newBook, setNewBook] = useState({ title: "", author: "", isbn: "", coverUrl: "" });
   const [editBook, setEditBook] = useState<RankedBook | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -132,11 +133,12 @@ export default function BooksPage() {
       title: newBook.title.trim(),
       author: newBook.author.trim(),
       isbn: newBook.isbn.trim(),
+      coverUrl: newBook.coverUrl.trim() || undefined,
       elo: 1000,
       comparisonCount: 0,
     };
     setBooks((prev) => [...prev, book]);
-    setNewBook({ title: "", author: "", isbn: "" });
+    setNewBook({ title: "", author: "", isbn: "", coverUrl: "" });
     setAddOpen(false);
   };
 
@@ -213,14 +215,14 @@ export default function BooksPage() {
                   <CompareCard
                     title={pair[0].title}
                     subtitle={pair[0].author}
-                    coverUrl={coverUrl(pair[0].isbn)}
+                    coverUrl={coverUrl(pair[0])}
                     onClick={() => handleVote(pair[0].id, pair[1].id)}
                   />
                   <span className="text-xl font-bold text-neutral-300">vs</span>
                   <CompareCard
                     title={pair[1].title}
                     subtitle={pair[1].author}
-                    coverUrl={coverUrl(pair[1].isbn)}
+                    coverUrl={coverUrl(pair[1])}
                     onClick={() => handleVote(pair[1].id, pair[0].id)}
                   />
                 </div>
@@ -247,7 +249,7 @@ export default function BooksPage() {
                 </span>
                 <div className="w-12 h-16 rounded overflow-hidden bg-neutral-100 shrink-0">
                   <img
-                    src={coverUrl(book.isbn)}
+                    src={coverUrl(book)}
                     alt={book.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -319,6 +321,16 @@ export default function BooksPage() {
                   className="col-span-3"
                 />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="b-cover" className="text-right">Cover URL</Label>
+                <Input
+                  id="b-cover"
+                  placeholder="https://… (optional)"
+                  value={newBook.coverUrl}
+                  onChange={(e) => setNewBook((p) => ({ ...p, coverUrl: e.target.value }))}
+                  className="col-span-3"
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={!newBook.title.trim() || !newBook.author.trim()}>
@@ -340,10 +352,11 @@ export default function BooksPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
+                const newCoverUrl = (fd.get("coverUrl") as string).trim();
                 setBooks((prev) =>
                   prev.map((b) =>
                     b.id === editBook.id
-                      ? { ...b, title: (fd.get("title") as string).trim(), author: (fd.get("author") as string).trim() }
+                      ? { ...b, title: (fd.get("title") as string).trim(), author: (fd.get("author") as string).trim(), coverUrl: newCoverUrl || undefined }
                       : b
                   )
                 );
@@ -358,6 +371,10 @@ export default function BooksPage() {
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="e-author" className="text-right">Author</Label>
                   <Input id="e-author" name="author" defaultValue={editBook.author} className="col-span-3" required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="e-cover" className="text-right">Cover URL</Label>
+                  <Input id="e-cover" name="coverUrl" placeholder="https://… (optional)" defaultValue={editBook.coverUrl ?? ""} className="col-span-3" />
                 </div>
               </div>
               <DialogFooter>
